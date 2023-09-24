@@ -139,7 +139,57 @@ def move_big_males_female_first_stage(big_males, big_malesFX, female, femaleFX, 
             femaleFX = fx
     return big_males, big_malesFX, female, femaleFX
 
-def crossover(n_var,parent1, parent2):
+
+def move_small_males_first_stage(
+    mlipir_rate, big_males, small_males, small_males_fx, n_var, function_id
+):
+    HQ = big_males
+    temp_weak_males = small_males.copy()
+    temp_weak_males_fx = small_males_fx.copy()
+    max_fol_hq = 1
+
+    for ww in range(small_males.shape[0]):
+        vector_mlipir_velocity = np.zeros(n_var)  # vector of MLIPIR velocity
+        rhq = np.random.permutation(HQ.shape[0])  # random permutation of HQ
+        fol_hq = 0  # number of following HQ
+
+        for fs in range(len(rhq)):  # for each HQ
+            ind = rhq[fs]  # index of HQ
+            movement_attribute = np.random.permutation(
+                n_var
+            )  # random permutation of movement attribute
+            dimensional_size_mlipir = round(
+                mlipir_rate * n_var
+            )  # number of dimensional size of MLIPIR
+            if dimensional_size_mlipir >= n_var:
+                dimensional_size_mlipir = n_var - 1
+            if dimensional_size_mlipir < 1:
+                dimensional_size_mlipir = 1
+
+            # move the weak males based on the dimensional size of MLIPIR
+            move_weak_maes = movement_attribute[:dimensional_size_mlipir]
+            binary_pattern = np.zeros(n_var)
+            binary_pattern[move_weak_maes] = 1
+
+            vector_mlipir_velocity = vector_mlipir_velocity + np.random.rand(n_var) * (
+                HQ[ind, :] * binary_pattern - small_males[ww, :] * binary_pattern
+            )
+            fol_hq += 1
+            if fol_hq >= max_fol_hq:
+                break
+
+        new_small_males = small_males[ww, :] + vector_mlipir_velocity
+        new_small_males = trimr(new_small_males)
+        temp_weak_males[ww, :] = new_small_males
+        temp_weak_males_fx[ww] = evaluation(new_small_males, function_id)
+
+    small_males = temp_weak_males
+    small_males_fx = temp_weak_males_fx
+
+    return small_males, small_males_fx
+
+
+def crossover(n_var, parent1, parent2):
     """
     Crossover operator
     :param n_var: number of variables
@@ -148,31 +198,34 @@ def crossover(n_var,parent1, parent2):
     :return: offsprings
     """
     Offsprings = np.zeros((2, n_var))  # Initialize Offsprings
-    
+
     for ii in range(n_var):
         rval = np.random.rand()  # Generate a random value in each dimension
         Offsprings[0, ii] = rval * parent1[ii] + (1 - rval) * parent2[ii]
         Offsprings[1, ii] = rval * parent2[ii] + (1 - rval) * parent1[ii]
-    
+
     # Limit the values into the given dimensional boundaries
     Offsprings[0, :] = trimr(Offsprings[0, :])
     Offsprings[1, :] = trimr(Offsprings[1, :])
-    
+
     return Offsprings
 
 
 def mutation(female, n_var, cons_ub, cons_lb, mut_rate, mut_radius):
     new_female = female.copy()  # Initialize a new Female
     max_step = mut_radius * (cons_ub - cons_lb)  # Maximum step of the Female mutation
-    
+
     for ii in range(n_var):
-        if np.random.rand() < mut_rate:  # Check if a random value is lower than the Mutation Rate
+        if (
+            np.random.rand() < mut_rate
+        ):  # Check if a random value is lower than the Mutation Rate
             new_female[ii] = female[ii] + (2 * np.random.rand() - 1) * max_step[ii]
-    
+
     # Limit the values into the given dimensional boundaries
     new_female = trimr(new_female)
-    
+
     return new_female
+
 
 def replacement(X, FX, Y, FY):
     """
@@ -216,7 +269,7 @@ if __name__ == "__main__":
     dimension = 50
     pop_size = 5
 
-    n_var, cons_ub, cons_lb, mv = get_function(function_id, dimension)
+    n_var, cons_ub, cons_lb, f_treshold_fx = get_function(function_id, dimension)
 
     cons_ub = np.ones(n_var) * cons_ub
     cons_lb = np.ones(n_var) * cons_lb
@@ -244,5 +297,61 @@ if __name__ == "__main__":
     mutation_rate = 0.5
     mutation_radius = 0.5
 
+    # first stage
+    # examining if the benchmark function is simple or complex
 
+    is_global = 0  # boolean to check if the global optimum is found
+    improve_rate = 0  # improvement rate to examine the benchmark function
+    num_evaluation = 0  # number of evaluation
+    generation = 0  # number of generation
+    max_generation_exam_1 = 100  # maximum number of generation of the first examination
+    max_generation_exam_2 = (
+        100  # maximum number of generation of the second examination
+    )
+
+    f_opt = []  # optimal fitness value each generation
+    f_mean = []  # mean fitness value each generation
+    evo_population_size = []  # population size each generation
+    gen_improve = 0  # generation counter to check the improvement rate condition
+
+    while generation < max_generation_exam_2:
+        generation += 1  # increase the generation counter
+        num_evaluation += pop_size  # increase the number of evaluation
+
+        big_males = population[:num_big_males, :]
+        big_males_fx = fx[:num_big_males]
+        female = population[num_big_males + 1, :]
+        female_fx = fx[num_big_males + 1]
+        small_males = population[num_big_males + 2 :, :]
+        small_males_fx = fx[num_big_males + 2 :]
+
+        big_males, big_males_fx, female, female_fx = move_big_males_female_first_stage(
+            big_males, big_males_fx, female, female_fx, n_var, function_id
+        )
+
+        population = np.vstack((big_males, female, small_males))
+        fx = np.concatenate((big_males_fx, [female_fx], small_males_fx))
+
+        sorted_fx, ind_fx = np.sort(fx), fx.argsort(fx)
+        fx = sorted_fx
+        population = population[ind_fx, :]
+        best_individual = population[0, :]
+        optimum_value = fx[0]
+
+        f_opt.append(optimum_value)
+        f_mean.append(np.mean(fx))
+        evo_population_size.append(population.shape[0])
+
+        if optimum_value < one_elit_fx:
+            one_elit_fx = optimum_value
+            gen_improve += 1
+            improve_rate = gen_improve / generation
+        if optimum_value<= f_treshold_fx:
+            is_global = 1
+            break
+        if generation == max_generation_exam_1:
+            if improve_rate < 0.5:
+                is_global = 0
+                break
+    
 
