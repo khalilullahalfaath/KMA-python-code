@@ -80,6 +80,12 @@ def pop_cons_initialization(population_size, n_var, cons_ub, cons_lb):
 
 
 def move_big_males_female_first_stage(big_males, big_malesFX, female, femaleFX, n_var):
+    """
+    move big males closer to the optimum value and then the female will reproduce or mutate (asexual reproduction)
+    :param big_males, big_males_fx: big_males value and it's fitness value
+    :param female, female_fx: female value and it's fitness value
+    :return the current position after moving
+    """
     HQ = big_males.copy()
     HQFX = big_malesFX.copy()
 
@@ -143,6 +149,13 @@ def move_big_males_female_first_stage(big_males, big_malesFX, female, femaleFX, 
 def move_small_males_first_stage(
     mlipir_rate, big_males, small_males, small_males_fx, n_var, function_id
 ):
+    """
+    move the small males based on the dimensional size of MLIPIR
+    :param mlipir_rate: rate of MLIPIR
+    :param big_males: big males value so far as the reference point 
+    :param small_males, small_males_fx: small males and it's fitness value
+    :return: moved small males and it's fitness value
+    """
     HQ = big_males
     temp_weak_males = small_males.copy()
     temp_weak_males_fx = small_males_fx.copy()
@@ -279,14 +292,15 @@ if __name__ == "__main__":
     fx = np.zeros(pop_size)
     for i in range(pop_size):
         fx[i] = evaluation(population[i, :], function_id)
-    # print(fx)
 
     # sort the individual
-    sorted_fx = fx.sort(axis=1)
-    ind_fx = fx.argsort(axis=1)
+    sorted_fx = sorted(fx)
+
+    ind_fx = fx.argsort(axis=0)
 
     fx = sorted_fx
     population = population[ind_fx, :]
+
 
     one_elit_fx = fx[0]
 
@@ -313,6 +327,8 @@ if __name__ == "__main__":
     f_mean = []  # mean fitness value each generation
     evo_population_size = []  # population size each generation
     gen_improve = 0  # generation counter to check the improvement rate condition
+
+    # print(num_big_males)
 
     while generation < max_generation_exam_2:
         generation += 1  # increase the generation counter
