@@ -152,7 +152,7 @@ def move_small_males_first_stage(
     """
     move the small males based on the dimensional size of MLIPIR
     :param mlipir_rate: rate of MLIPIR
-    :param big_males: big males value so far as the reference point 
+    :param big_males: big males value so far as the reference point
     :param small_males, small_males_fx: small males and it's fitness value
     :return: moved small males and it's fitness value
     """
@@ -200,6 +200,75 @@ def move_small_males_first_stage(
     small_males_fx = temp_weak_males_fx
 
     return small_males, small_males_fx
+
+def move_small_males_second_stage(mlipir_rate, big_males, all_hq, small_males, small_males_fx, n_var):
+    if len(all_hq) != 0:
+        hq = [[big_males], [all_hq]]
+    else:
+        hq = big_males
+    temp_weak_males = small_males
+    temp_weak_males = small_males_fx
+
+    for ww in range(1, small_males.shape[0]+1):
+        max_fol_hq = np.random.randint(1, 3)
+        vector_mlipir_rate = np.zeros(n_var)
+        r_hq = np.random.permutation(hq.shape[0])
+        fol_hq = 0
+        for fs in range(1, r_hq.size[0]+1):
+            individual = r_hq[fs]
+            attributes_movement = np.random.permutation(n_var)
+            dimensional_size_mlipir = round(mlipir_rate * n_var)
+            if dimensional_size_mlipir >= n_var:
+                dimensional_size_mlipir = n_var - 1
+            if dimensional_size_mlipir < 1:
+                dimensional_size_mlipir = 1
+            movement = attributes_movement[:dimensional_size_mlipir]
+            binary_pattern = np.zeros(n_var)
+            binary_pattern[movement] = 1
+            vector_mlipir_rate = vector_mlipir_rate + np.random.rand(n_var) * (
+
+
+
+def move_big_males_second_stage(
+    big_males, big_males_fx, all_hq, all_hq_fx, female, female_fx, n_var, function_id
+):
+    """ """
+    if len(all_hq) != 0:
+        global_hq = [[big_males], [all_hq]]
+        global_hq_fx = np.concatenate((big_males, all_hq_fx))
+    else:
+        global_hq = big_males
+        global_hq_fx = big_males_fx
+
+    temp_sm = big_males
+    temp_sm_fx = big_males_fx
+
+    for ss in range(1, temp_sm.shape[0]):
+        velocity_big_male = np.zeros(n_var)
+        r_hq = np.random.permutation(global_hq.shape[0])
+        max_fol_hq = np.random.randint(1, 3)
+        fol_hq = 0
+
+        for fs in range(1, len(r_hq)):
+            individual = r_hq[fs]
+            if individual != ss:
+                # select randomly individual to define attraction or distraction
+                if global_hq_fx[individual] < temp_sm_fx[ss] or np.random.rand() < 0.5:
+                    velocity_big_male = velocity_big_male + np.random.rand() * (
+                        global_hq[individual, :] - temp_sm[ss, :]
+                    )
+                else:
+                    velocity_big_male = velocity_big_male + np.random.rand() * (
+                        temp_sm[ss, :] - global_hq[individual, :]
+                    )
+            fol_hq += 1
+            if fol_hq >= max_fol_hq:
+                break
+        new_big_males = temp_sm[ss, :] + velocity_big_male
+        new_big_males = trimr(new_big_males)
+        temp_sm[ss, :] = new_big_males
+        temp_sm_fx[ss] = evaluation(new_big_males)
+    return female, female_fx
 
 
 def crossover(n_var, parent1, parent2):
@@ -301,7 +370,6 @@ if __name__ == "__main__":
     fx = sorted_fx
     population = population[ind_fx, :]
 
-
     one_elit_fx = fx[0]
 
     # setting the parameters
@@ -362,12 +430,10 @@ if __name__ == "__main__":
             one_elit_fx = optimum_value
             gen_improve += 1
             improve_rate = gen_improve / generation
-        if optimum_value<= f_treshold_fx:
+        if optimum_value <= f_treshold_fx:
             is_global = 1
             break
         if generation == max_generation_exam_1:
             if improve_rate < 0.5:
                 is_global = 0
                 break
-    
-
