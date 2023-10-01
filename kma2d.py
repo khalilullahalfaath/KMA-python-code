@@ -201,20 +201,23 @@ def move_small_males_first_stage(
 
     return small_males, small_males_fx
 
-def move_small_males_second_stage(mlipir_rate, big_males, all_hq, small_males, small_males_fx, n_var):
+
+def move_small_males_second_stage(
+    mlipir_rate, big_males, all_hq, small_males, small_males_fx, n_var
+):
     if len(all_hq) != 0:
         hq = [[big_males], [all_hq]]
     else:
         hq = big_males
     temp_weak_males = small_males
-    temp_weak_males = small_males_fx
+    temp_weak_males_fx = small_males_fx
 
-    for ww in range(1, small_males.shape[0]+1):
+    for ww in range(1, small_males.shape[0] + 1):
         max_fol_hq = np.random.randint(1, 3)
         vector_mlipir_rate = np.zeros(n_var)
         r_hq = np.random.permutation(hq.shape[0])
         fol_hq = 0
-        for fs in range(1, r_hq.size[0]+1):
+        for fs in range(1, r_hq.size[0] + 1):
             individual = r_hq[fs]
             attributes_movement = np.random.permutation(n_var)
             dimensional_size_mlipir = round(mlipir_rate * n_var)
@@ -225,8 +228,21 @@ def move_small_males_second_stage(mlipir_rate, big_males, all_hq, small_males, s
             movement = attributes_movement[:dimensional_size_mlipir]
             binary_pattern = np.zeros(n_var)
             binary_pattern[movement] = 1
-            vector_mlipir_rate = vector_mlipir_rate + np.random.rand(n_var) * (
-
+            vector_mlipir_rate = (
+                vector_mlipir_rate
+                + np.random.rand(n_var) * (hq[individual, :] * binary_pattern)
+                - small_males[ww, :] * binary_pattern
+            )
+            fol_hq += 1
+            if fol_hq >= max_fol_hq:
+                break
+        new_small_males = small_males[ww, :] + vector_mlipir_rate
+        new_small_males = trimr(new_small_males)
+        temp_weak_males[ww,:] = new_small_males
+        temp_weak_males_fx[ww] = evaluation(new_small_males)
+    small_males = temp_weak_males
+    small_males_fx = temp_weak_males_fx
+    return small_males, small_males_fx
 
 
 def move_big_males_second_stage(
