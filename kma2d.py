@@ -6,7 +6,7 @@ def get_function(function_id, dimension):
     """
     :param function_id: function id
     :param dimension: dimension of the problem
-    :return: function name, upper bound, lower bound, number of constraints
+    :return: upper bound, lower bound, number of constraints
     """
     n_var = dimension
 
@@ -16,6 +16,73 @@ def get_function(function_id, dimension):
             cons_ub = 100
             cons_lb = -100
             mv = 0
+        case 2:
+            cons_ub = 10
+            cons_lb = -10
+            mv = 0
+        case 3:
+            cons_ub = 100
+            cons_lb = -100
+            mv = 0
+        case 4:
+            cons_ub = 100
+            cons_lb = -100
+            mv = 0
+        case 5:
+            cons_ub = 30
+            cons_lb = -30
+            mv = 0
+        case 6:
+            cons_ub = 100
+            cons_lb = -100
+            mv = 0
+        case 7:
+            cons_ub = 1.28
+            cons_lb = -1.28
+            mv = 0
+        case 8:
+            cons_ub = 500
+            cons_lb = -500
+            mv = -418.9829 * n_var
+        case 9:
+            cons_ub = 5.12
+            cons_lb = -5.12
+            mv = 0
+        case 10:
+            cons_ub = 32
+            cons_lb = -32
+            mv = 0
+        case 11:
+            cons_ub = 600
+            cons_lb = -600
+            mv = 0
+        case 12:
+            cons_ub = 50
+            cons_lb = -50
+            mv = 0
+        # case 13:
+        #     cons_ub = 50
+        #     cons_lb = -50
+        #     mv = 0
+        # case 14:
+        #     n_var = 2
+        #     cons_ub = 65
+        #     cons_lb = -65
+        #     mv = 0.998
+        # case 15:
+        #     n_var = 4
+        #     cons_ub = 5
+        #     cons_lb = -5
+        #     mv = 0.0003
+        # case 16:
+        #     n_var = 2
+        #     cons_ub = 5
+        #     cons_lb = -5
+        #     mv = -1.0316
+        
+
+
+
 
     return n_var, cons_ub, cons_lb, mv
 
@@ -31,7 +98,7 @@ def evaluation(X, function_id):
     match function_id:
         case 1:
             fx = np.sum(X**2)
-
+        
     return fx
 
 
