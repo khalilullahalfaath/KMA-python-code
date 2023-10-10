@@ -52,14 +52,14 @@ def get_function(function_id, dimension):
             cons_ub = 32
             cons_lb = -32
             mv = 0
-        case 11:
-            cons_ub = 600
-            cons_lb = -600
-            mv = 0
-        case 12:
-            cons_ub = 50
-            cons_lb = -50
-            mv = 0
+        # case 11:
+        #     cons_ub = 600
+        #     cons_lb = -600
+        #     mv = 0
+        # case 12:
+        #     cons_ub = 50
+        #     cons_lb = -50
+        #     mv = 0
         # case 13:
         #     cons_ub = 50
         #     cons_lb = -50
@@ -79,10 +79,6 @@ def get_function(function_id, dimension):
         #     cons_ub = 5
         #     cons_lb = -5
         #     mv = -1.0316
-        
-
-
-
 
     return n_var, cons_ub, cons_lb, mv
 
@@ -97,8 +93,42 @@ def evaluation(X, function_id):
     # switch
     match function_id:
         case 1:
+            # sphere
             fx = np.sum(X**2)
-        
+        case 2:
+            # schwefel 2.22
+            fx = np.sum(np.abs(X)) + np.prod(np.abs(X))
+        case 3:
+            # schwefel 1.2
+            fx = 0
+            for ii in range(dim):
+                fx += np.sum(X[:ii]) ** 2
+        case 4:
+            # schewefel 2.21
+            fx = np.max(np.abs(X))
+        case 5:
+            # rosenbrock function
+            fx = np.sum(100 * X[1:dim]-X[:dim-1]**2)**2 + (X[:dim-1]-1)**2
+        case 6:
+            # step function
+            fx = np.sum(np.floor(X + 0.5) ** 2)
+        case 7:
+            # quartic function
+            # TODO: check the formula
+            fx = np.sum(np.arange(1, dim + 1) * X ** 4) + np.random.rand()
+        case 8:
+            # schwefel function
+            fx = np.sum(-X * np.sin(np.sqrt(np.abs(X))))
+        case 9:
+            # rastrigin function
+            fx = np.sum(X ** 2 - 10 * np.cos(2 * np.pi * X) + 10 * dim)
+        case 10:
+            # ackley function
+            fx = -20 * np.exp(-0.2 * np.sqrt(np.sum(X ** 2) / dim)) - np.exp(
+                np.sum(np.cos(2 * np.pi * X)) / dim
+            ) + 20 + np.exp(1)
+        case 11:
+            fx = np.sum(X ** 2) / 4000 - np.prod(np.cos(X / np.sqrt(np.arange(1, dim + 1)))) + 1
     return fx
 
 
@@ -305,7 +335,7 @@ def move_small_males_second_stage(
                 break
         new_small_males = small_males[ww, :] + vector_mlipir_rate
         new_small_males = trimr(new_small_males)
-        temp_weak_males[ww,:] = new_small_males
+        temp_weak_males[ww, :] = new_small_males
         temp_weak_males_fx[ww] = evaluation(new_small_males)
     small_males = temp_weak_males
     small_males_fx = temp_weak_males_fx
