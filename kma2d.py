@@ -108,27 +108,37 @@ def evaluation(X, function_id):
             fx = np.max(np.abs(X))
         case 5:
             # rosenbrock function
-            fx = np.sum(100 * X[1:dim]-X[:dim-1]**2)**2 + (X[:dim-1]-1)**2
+            fx = (
+                np.sum(100 * X[1:dim] - X[: dim - 1] ** 2) ** 2
+                + (X[: dim - 1] - 1) ** 2
+            )
         case 6:
             # step function
             fx = np.sum(np.floor(X + 0.5) ** 2)
         case 7:
             # quartic function
             # TODO: check the formula
-            fx = np.sum(np.arange(1, dim + 1) * X ** 4) + np.random.rand()
+            fx = np.sum(np.arange(1, dim + 1) * X**4) + np.random.rand()
         case 8:
             # schwefel function
             fx = np.sum(-X * np.sin(np.sqrt(np.abs(X))))
         case 9:
             # rastrigin function
-            fx = np.sum(X ** 2 - 10 * np.cos(2 * np.pi * X) + 10 * dim)
+            fx = np.sum(X**2 - 10 * np.cos(2 * np.pi * X) + 10 * dim)
         case 10:
             # ackley function
-            fx = -20 * np.exp(-0.2 * np.sqrt(np.sum(X ** 2) / dim)) - np.exp(
-                np.sum(np.cos(2 * np.pi * X)) / dim
-            ) + 20 + np.exp(1)
+            fx = (
+                -20 * np.exp(-0.2 * np.sqrt(np.sum(X**2) / dim))
+                - np.exp(np.sum(np.cos(2 * np.pi * X)) / dim)
+                + 20
+                + np.exp(1)
+            )
         case 11:
-            fx = np.sum(X ** 2) / 4000 - np.prod(np.cos(X / np.sqrt(np.arange(1, dim + 1)))) + 1
+            fx = (
+                np.sum(X**2) / 4000
+                - np.prod(np.cos(X / np.sqrt(np.arange(1, dim + 1))))
+                + 1
+            )
     return fx
 
 
@@ -208,7 +218,7 @@ def move_big_males_female_first_stage(big_males, big_malesFX, female, femaleFX, 
                 break
 
         NewBM = TempSM[ss, :] + VM  # New Big Males
-        NewBM = trimr(NewBM)  # Limit the values into the given dimensional boundaries
+        NewBM = trimr(NewBM, n_var, cons_ub, cons_lb)  # Limit the values into the given dimensional boundaries
         TempSM[ss, :] = NewBM
         TempSMFX[ss] = evaluation(NewBM)
 
@@ -477,7 +487,6 @@ if __name__ == "__main__":
 
     # sort the individual
     sorted_fx = sorted(fx)
-
     ind_fx = fx.argsort(axis=0)
 
     fx = sorted_fx
@@ -487,7 +496,7 @@ if __name__ == "__main__":
 
     # setting the parameters
     max_adaptive_population = pop_size * 40
-    num_big_males = np.floor(pop_size / 2)
+    num_big_males = int(np.floor(pop_size / 2))
     mlipir_rate = (n_var - 1) / n_var
     mutation_rate = 0.5
     mutation_radius = 0.5
@@ -510,43 +519,51 @@ if __name__ == "__main__":
     gen_improve = 0  # generation counter to check the improvement rate condition
 
     # print(num_big_males)
+    print(population)
+    print("population size: ", population.shape[0])
 
     while generation < max_generation_exam_2:
         generation += 1  # increase the generation counter
         num_evaluation += pop_size  # increase the number of evaluation
 
-        big_males = population[:num_big_males, :]
+        big_males = population[:num_big_males]
         big_males_fx = fx[:num_big_males]
-        female = population[num_big_males + 1, :]
-        female_fx = fx[num_big_males + 1]
-        small_males = population[num_big_males + 2 :, :]
+        # print("big_males", big_males.shape[0])
+        female = population[num_big_males : num_big_males + 1, :]
+        # print(female)
+        # print("female", female.shape[0])
+        female_fx = fx[num_big_males]
+        small_males = population[num_big_males + 1 :]
+        # print("small males", small_males.shape[0])
+        # print(small_males)
         small_males_fx = fx[num_big_males + 2 :]
 
         big_males, big_males_fx, female, female_fx = move_big_males_female_first_stage(
-            big_males, big_males_fx, female, female_fx, n_var, function_id
+            big_males, big_males_fx, female, female_fx, n_var
         )
+        print(big_males, big_males_fx)
 
-        population = np.vstack((big_males, female, small_males))
-        fx = np.concatenate((big_males_fx, [female_fx], small_males_fx))
+        # population = np.vstack((big_males, female, small_males))
+        # fx = np.concatenate((big_males_fx, [female_fx], small_males_fx))
 
-        sorted_fx, ind_fx = np.sort(fx), fx.argsort(fx)
-        fx = sorted_fx
-        population = population[ind_fx, :]
-        best_individual = population[0, :]
-        optimum_value = fx[0]
+        # sorted_fx, ind_fx = np.sort(fx), fx.argsort(fx)
+        # fx = sorted_fx
+        # population = population[ind_fx, :]
+        # best_individual = population[0, :]
+        # optimum_value = fx[0]
 
-        f_opt.append(optimum_value)
-        f_mean.append(np.mean(fx))
-        evo_population_size.append(population.shape[0])
+        # f_opt.append(optimum_value)
+        # f_mean.append(np.mean(fx))
+        # evo_population_size.append(population.shape[0])
 
-        if optimum_value < one_elit_fx:
-            one_elit_fx = optimum_value
-            gen_improve += 1
-            improve_rate = gen_improve / generation
-        if optimum_value <= f_treshold_fx:
-            is_global = 1
-            break
-        if generation == max_generation_exam_1:
-            if improve_rate < 0.5:
-                is_global = 0
-                break
+        # if optimum_value < one_elit_fx:
+        #     one_elit_fx = optimum_value
+        #     gen_improve += 1
+        #     improve_rate = gen_improve / generation
+        # if optimum_value <= f_treshold_fx:
+        #     is_global = 1
+        #     break
+        # if generation == max_generation_exam_1:
+        #     if improve_rate < 0.5:
+        #         is_global = 0
+        #         break
