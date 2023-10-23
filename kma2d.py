@@ -546,7 +546,7 @@ if __name__ == "__main__":
         big_males, big_males_fx, female, female_fx = move_big_males_female_first_stage(
             big_males, big_males_fx, female, female_fx, n_var
         )
-        # print(big_males, big_males_fx)
+
 
         population = np.vstack((big_males, female, small_males))
         fx = np.concatenate((big_males_fx, [female_fx], small_males_fx))
