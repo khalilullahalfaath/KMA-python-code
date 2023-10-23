@@ -547,28 +547,29 @@ if __name__ == "__main__":
             big_males, big_males_fx, female, female_fx, n_var
         )
 
-
         population = np.vstack((big_males, female, small_males))
         fx = np.concatenate((big_males_fx, [female_fx], small_males_fx))
 
-        # sorted_fx, ind_fx = np.sort(fx), fx.argsort(fx)
-        # fx = sorted_fx
-        # population = population[ind_fx, :]
-        # best_individual = population[0, :]
-        # optimum_value = fx[0]
+        sorted_fx, ind_fx = sorted(fx), fx.argsort(axis=0)
 
-        # f_opt.append(optimum_value)
-        # f_mean.append(np.mean(fx))
-        # evo_population_size.append(population.shape[0])
+        fx = sorted_fx
+        population = population[ind_fx, :]
+        
+        best_individual = population[0, :]
+        optimum_value = fx[0]
 
-        # if optimum_value < one_elit_fx:
-        #     one_elit_fx = optimum_value
-        #     gen_improve += 1
-        #     improve_rate = gen_improve / generation
-        # if optimum_value <= f_treshold_fx:
-        #     is_global = 1
-        #     break
-        # if generation == max_generation_exam_1:
-        #     if improve_rate < 0.5:
-        #         is_global = 0
-        #         break
+        f_opt.append(optimum_value)
+        f_mean.append(np.mean(fx))
+        evo_population_size.append(population.shape[0])
+
+        if optimum_value < one_elit_fx:
+            one_elit_fx = optimum_value
+            gen_improve += 1
+            improve_rate = gen_improve / generation
+        if optimum_value <= f_treshold_fx:
+            is_global = 1
+            break
+        if generation == max_generation_exam_1:
+            if improve_rate < 0.5:
+                is_global = 0
+                break
