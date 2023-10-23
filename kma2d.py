@@ -218,9 +218,11 @@ def move_big_males_female_first_stage(big_males, big_malesFX, female, femaleFX, 
                 break
 
         NewBM = TempSM[ss, :] + VM  # New Big Males
-        NewBM = trimr(NewBM, n_var, cons_ub, cons_lb)  # Limit the values into the given dimensional boundaries
+        NewBM = trimr(
+            NewBM, n_var, cons_ub, cons_lb
+        )  # Limit the values into the given dimensional boundaries
         TempSM[ss, :] = NewBM
-        TempSMFX[ss] = evaluation(NewBM)
+        TempSMFX[ss] = evaluation(NewBM, function_id)
 
     # Replace the Big Males with the best ones
     big_males, big_malesFX = replacement(big_males, big_malesFX, TempSM, TempSMFX)
@@ -229,7 +231,7 @@ def move_big_males_female_first_stage(big_males, big_malesFX, female, femaleFX, 
     winnerFX = big_malesFX[0]
 
     if winnerFX < femaleFX or np.random.rand() < 0.5:  # Sexual reproduction
-        OffSprings = crossover(winnerBM, female)
+        OffSprings = crossover(n_var, winnerBM, female)
         fx1 = evaluation(OffSprings[0, :])
         fx2 = evaluation(OffSprings[1, :])
 
@@ -402,6 +404,11 @@ def crossover(n_var, parent1, parent2):
     :param parent2: parent 2
     :return: offsprings
     """
+    # fix size of parent1 and parent2
+    parent1 = np.ravel(parent1)
+    parent2 = np.ravel(parent2)
+
+
     Offsprings = np.zeros((2, n_var))  # Initialize Offsprings
 
     for ii in range(n_var):
@@ -462,8 +469,10 @@ def trimr(X, n_var, cons_ub, cons_lb):
     :return: population
     """
     for ii in range(n_var):
-        X[X[:, ii] < cons_lb[ii], ii] = cons_lb[ii]
-        X[X[:, ii] > cons_ub[ii], ii] = cons_ub[ii]
+        if X[ii] > cons_ub[ii]:
+            X[ii] = cons_ub[ii]
+        if X[ii] < cons_lb[ii]:
+            X[ii] = cons_lb[ii]
     Z = X.copy()
     return Z
 
@@ -518,24 +527,17 @@ if __name__ == "__main__":
     evo_population_size = []  # population size each generation
     gen_improve = 0  # generation counter to check the improvement rate condition
 
-    # print(num_big_males)
-    print(population)
-    print("population size: ", population.shape[0])
-
     while generation < max_generation_exam_2:
         generation += 1  # increase the generation counter
         num_evaluation += pop_size  # increase the number of evaluation
 
         big_males = population[:num_big_males]
         big_males_fx = fx[:num_big_males]
-        # print("big_males", big_males.shape[0])
+
         female = population[num_big_males : num_big_males + 1, :]
-        # print(female)
-        # print("female", female.shape[0])
         female_fx = fx[num_big_males]
+
         small_males = population[num_big_males + 1 :]
-        # print("small males", small_males.shape[0])
-        # print(small_males)
         small_males_fx = fx[num_big_males + 2 :]
 
         big_males, big_males_fx, female, female_fx = move_big_males_female_first_stage(
