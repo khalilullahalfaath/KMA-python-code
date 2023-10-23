@@ -231,9 +231,9 @@ def move_big_males_female_first_stage(big_males, big_malesFX, female, femaleFX, 
     winnerFX = big_malesFX[0]
 
     if winnerFX < femaleFX or np.random.rand() < 0.5:  # Sexual reproduction
-        OffSprings = crossover(n_var, winnerBM, female)
-        fx1 = evaluation(OffSprings[0, :])
-        fx2 = evaluation(OffSprings[1, :])
+        OffSprings = crossover(n_var, winnerBM, female, cons_ub, cons_lb)
+        fx1 = evaluation(OffSprings[0, :], function_id)
+        fx2 = evaluation(OffSprings[1, :], function_id)
 
         # Keep the best position of female
         if fx1 < fx2:
@@ -245,8 +245,10 @@ def move_big_males_female_first_stage(big_males, big_malesFX, female, femaleFX, 
                 female = OffSprings[1, :]
                 femaleFX = fx2
     else:  # Asexual reproduction
-        newFemale = mutation()
-        fx = evaluation(newFemale)
+        newFemale = mutation(
+            female, n_var, cons_ub, cons_lb, mutation_rate, mutation_radius
+        )
+        fx = evaluation(newFemale, function_id)
 
         # Keep the best position of female
         if fx < femaleFX:
@@ -396,7 +398,7 @@ def move_big_males_second_stage(
     return female, female_fx
 
 
-def crossover(n_var, parent1, parent2):
+def crossover(n_var, parent1, parent2, cons_ub, cons_lb):
     """
     Crossover operator
     :param n_var: number of variables
@@ -408,7 +410,6 @@ def crossover(n_var, parent1, parent2):
     parent1 = np.ravel(parent1)
     parent2 = np.ravel(parent2)
 
-
     Offsprings = np.zeros((2, n_var))  # Initialize Offsprings
 
     for ii in range(n_var):
@@ -417,14 +418,16 @@ def crossover(n_var, parent1, parent2):
         Offsprings[1, ii] = rval * parent2[ii] + (1 - rval) * parent1[ii]
 
     # Limit the values into the given dimensional boundaries
-    Offsprings[0, :] = trimr(Offsprings[0, :])
-    Offsprings[1, :] = trimr(Offsprings[1, :])
+    Offsprings[0, :] = trimr(Offsprings[0, :], n_var, cons_ub, cons_lb)
+    Offsprings[1, :] = trimr(Offsprings[1, :], n_var, cons_ub, cons_lb)
 
     return Offsprings
 
 
 def mutation(female, n_var, cons_ub, cons_lb, mut_rate, mut_radius):
+    female = np.ravel(female)
     new_female = female.copy()  # Initialize a new Female
+    new_female = np.ravel(new_female)
     max_step = mut_radius * (cons_ub - cons_lb)  # Maximum step of the Female mutation
 
     for ii in range(n_var):
@@ -434,7 +437,7 @@ def mutation(female, n_var, cons_ub, cons_lb, mut_rate, mut_radius):
             new_female[ii] = female[ii] + (2 * np.random.rand() - 1) * max_step[ii]
 
     # Limit the values into the given dimensional boundaries
-    new_female = trimr(new_female)
+    new_female = trimr(new_female, n_var, cons_ub, cons_lb)
 
     return new_female
 
@@ -543,10 +546,10 @@ if __name__ == "__main__":
         big_males, big_males_fx, female, female_fx = move_big_males_female_first_stage(
             big_males, big_males_fx, female, female_fx, n_var
         )
-        print(big_males, big_males_fx)
+        # print(big_males, big_males_fx)
 
-        # population = np.vstack((big_males, female, small_males))
-        # fx = np.concatenate((big_males_fx, [female_fx], small_males_fx))
+        population = np.vstack((big_males, female, small_males))
+        fx = np.concatenate((big_males_fx, [female_fx], small_males_fx))
 
         # sorted_fx, ind_fx = np.sort(fx), fx.argsort(fx)
         # fx = sorted_fx
