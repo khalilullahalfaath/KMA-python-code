@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import math
 
 
 def get_function(function_id, dimension):
@@ -52,33 +53,33 @@ def get_function(function_id, dimension):
             cons_ub = 32
             cons_lb = -32
             mv = 0
-        # case 11:
-        #     cons_ub = 600
-        #     cons_lb = -600
-        #     mv = 0
-        # case 12:
-        #     cons_ub = 50
-        #     cons_lb = -50
-        #     mv = 0
-        # case 13:
-        #     cons_ub = 50
-        #     cons_lb = -50
-        #     mv = 0
-        # case 14:
-        #     n_var = 2
-        #     cons_ub = 65
-        #     cons_lb = -65
-        #     mv = 0.998
-        # case 15:
-        #     n_var = 4
-        #     cons_ub = 5
-        #     cons_lb = -5
-        #     mv = 0.0003
-        # case 16:
-        #     n_var = 2
-        #     cons_ub = 5
-        #     cons_lb = -5
-        #     mv = -1.0316
+        case 11:
+            cons_ub = 600
+            cons_lb = -600
+            mv = 0
+        case 12:
+            cons_ub = 50
+            cons_lb = -50
+            mv = 0
+        case 13:
+            cons_ub = 50
+            cons_lb = -50
+            mv = 0
+        case 14:
+            n_var = 2
+            cons_ub = 65
+            cons_lb = -65
+            mv = 0.998
+        case 15:
+            n_var = 4
+            cons_ub = 5
+            cons_lb = -5
+            mv = 0.0003
+        case 16:
+            n_var = 2
+            cons_ub = 5
+            cons_lb = -5
+            mv = -1.0316
 
     return n_var, cons_ub, cons_lb, mv
 
@@ -356,7 +357,7 @@ def move_small_males_second_stage(
     return small_males, small_males_fx
 
 
-def move_big_males_second_stage(
+def move_big_males_female_second_stage(
     big_males, big_males_fx, all_hq, all_hq_fx, female, female_fx, n_var, function_id
 ):
     """ """
@@ -406,7 +407,7 @@ def crossover(n_var, parent1, parent2, cons_ub, cons_lb):
     :param parent2: parent 2
     :return: offsprings
     """
-    # fix size of parent1 and parent2
+
     parent1 = np.ravel(parent1)
     parent2 = np.ravel(parent2)
 
@@ -480,11 +481,39 @@ def trimr(X, n_var, cons_ub, cons_lb):
     return Z
 
 
+def levy(n, m, beta):
+    num = math.gamma(1 + beta) * np.sin(np.pi * beta / 2)
+
+    den = math.gamma((1 + beta) / 2) * beta * 2 ** ((beta - 1) / 2)
+
+    sigma_u = (num / den) ** (1 / beta)
+
+    # random normal
+    u = np.random.normal(0, sigma_u, size=(n, m))
+    v = np.random.normal(0, 1, size=(n, m))
+
+    z = u / np.power(np.abs(v), 1 / beta)
+
+    return z
+
+
+def adding_population(population, n_var, cons_ub, cons_lb, function_id):
+    new_population = population + (0.05 * levy(1, n_var, 1.5)) * np.abs(
+        cons_ub - cons_lb
+    )
+    new_population = trimr(new_population, n_var, cons_ub, cons_lb)
+    new_population_fx = evaluation(new_population, function_id)
+    return new_population, new_population_fx
+
+
 # runner
 if __name__ == "__main__":
     function_id = 1
     dimension = 50
+    max_num_evaluation = 25000
     pop_size = 5
+    min_adaptive_population = pop_size * 4  # minimum adaptive population size
+    max_adaptive_population = pop_size * 40  # maximum adaptive population size
 
     n_var, cons_ub, cons_lb, f_treshold_fx = get_function(function_id, dimension)
 
@@ -554,7 +583,7 @@ if __name__ == "__main__":
 
         fx = sorted_fx
         population = population[ind_fx, :]
-        
+
         best_individual = population[0, :]
         optimum_value = fx[0]
 
@@ -573,3 +602,170 @@ if __name__ == "__main__":
             if improve_rate < 0.5:
                 is_global = 0
                 break
+    print(optimum_value)
+
+    # # second stage
+    # if (not is_global) and num_evaluation <= max_num_evaluation:
+    #     first_stage_population = (
+    #         population.copy()
+    #     )  # keep five best individuals from the first stage
+    #     first_stage_population_fx = (
+    #         fx.copy()
+    #     )  # keep five fitness value from the first stage
+    #     swarm_size = population.shape[0]  # swarm size
+    #     num_big_males = np.floor(swarm_size / 2)
+
+    #     increment_adaptive_population = swarm_size  # increment adaptive population
+    #     decrement_adaptive_population = swarm_size  # decrement adaptive population
+
+    #     mlipir_rate = 0.5
+    #     max_generation_improve = 2
+    #     max_generation_stagnan = 2
+
+    #     gen_improve = 0
+    #     gen_stagnan = 0
+
+    #     constrained_population = pop_cons_initialization(
+    #         max_adaptive_population - swarm_size
+    #     )
+    #     constrained_population_fx = np.zeros(constrained_population)
+    #     for ii in range(constrained_population.shape[0]):
+    #         constrained_population_fx[ii] = evaluation(
+    #             constrained_population[ii, :], function_id
+    #         )
+
+    #     # combine the population of the first stage and the constrained population
+    #     population = np.vstack((population, constrained_population))
+    #     pop_size = population.shape[0]
+    #     fx = np.concatenate((fx, constrained_population_fx))
+    #     one_elit_fx = min(fx)
+
+    #     while num_evaluation < max_num_evaluation:
+    #         adaptive_pop_size = population.shape[0]
+    #         all_high_quality_big_males = []
+    #         all_high_quality_big_males_fx = []
+
+    #         for individu in range(0, adaptive_pop_size, swarm_size):
+    #             microswarm = population[individu : individu + swarm_size]
+    #             microswarm_fx = fx[individu : individu + swarm_size]
+    #             ind_fx = microswarm_fx.argsort(axis=0)
+    #             microswarm = microswarm[ind_fx, :]
+    #             microswarm_fx = microswarm_fx[ind_fx]
+
+    #             all_high_quality_big_males = np.vstack(
+    #                 all_high_quality_big_males, microswarm[:num_big_males]
+    #             )
+    #             all_high_quality_big_males_fx = np.concatenate(
+    #                 all_high_quality_big_males_fx, microswarm_fx
+    #             )
+
+    #         for individu in range(0, adaptive_pop_size, swarm_size):
+    #             microwarm = population[individu : individu + swarm_size - 1]
+    #             microswarm_fx = fx[individu : individu + swarm_size - 1]
+    #             ind_fx = microswarm_fx.argsort(axis=0)
+    #             microswarm = microswarm[ind_fx, :]
+    #             microswarm_fx = microswarm_fx[ind_fx]
+
+    #             big_males = microswarm[:num_big_males]
+    #             big_males_fx = microswarm_fx[:num_big_males]
+
+    #             female = microswarm[num_big_males : num_big_males + 1, :]
+    #             female_fx = microswarm_fx[num_big_males]
+
+    #             small_males = microswarm[num_big_males + 1 :]
+    #             small_males_fx = microswarm_fx[num_big_males + 2 :]
+
+    #             (
+    #                 big_males,
+    #                 big_males_fx,
+    #                 female,
+    #                 female_fx,
+    #             ) = move_big_males_female_second_stage(
+    #                 big_males,
+    #                 big_males_fx,
+    #                 all_high_quality_big_males,
+    #                 all_high_quality_big_males_fx,
+    #                 female,
+    #                 female_fx,
+    #                 n_var,
+    #                 function_id,
+    #             )
+
+    #             small_males, small_males_fx = move_small_males_second_stage(
+    #                 mlipir_rate,
+    #                 big_males,
+    #                 all_high_quality_big_males,
+    #                 small_males,
+    #                 small_males_fx,
+    #                 n_var,
+    #             )
+
+    #             all_high_quality_big_males[
+    #                 individu : individu + num_big_males - 1, :
+    #             ] = big_males
+    #             all_high_quality_big_males_fx[
+    #                 individu : individu + num_big_males - 1
+    #             ] = big_males_fx
+
+    #             # new population
+    #             population[individu : individu + swarm_size - 1] = np.vstack(
+    #                 big_males, female, small_males
+    #             )
+    #             fx[individu : individu + swarm_size - 1] = np.concatenate(big_males_fx, female_fx, small_males_fx)
+
+    #             num_evaluation += swarm_size
+    #             ind_minimum = min(fx)
+    #             optimum_value = fx
+    #             if optimum_value <= f_treshold_fx:
+    #                 break
+
+    #         # random population
+    #         indivdu = np.random.permutation(fx)
+    #         population = population[indivdu, :]
+    #         fx = fx[indivdu]
+
+    #         # sort the population
+    #         individu_min = min(fx)
+    #         minimum_index = fx.index(individu_min)
+    #         best_individual = population[minimum_index, :]
+    #         optimum_value = fx[minimum_index]
+    #         f_opt.append(optimum_value)
+    #         f_mean.append(np.mean(fx))
+
+    #         # if round the optimum value is equal to the threshold value
+    #         if optimum_value <= f_treshold_fx:
+    #             break
+
+    #         # self adaptation of population size
+    #         if optimum_value < one_elit_fx:
+    #             gen_improve += 1
+    #             gen_stagnan = 0
+    #             one_elit_fx = optimum_value
+    #         else:
+    #             gen_stagnan += 1
+    #             gen_improve = 0
+
+    #         # if consecutive generation is improved
+    #         if gen_improve > max_generation_improve:
+    #             adaptive_pop_size -= decrement_adaptive_population
+    #             if adaptive_pop_size < min_adaptive_population:
+    #                 adaptive_pop_size = min_adaptive_population
+    #             sorted_fx, ind_fx = sorted(fx), fx.argsort(axis=0)
+    #             sorted_population = population[ind_fx, :]
+    #             population = sorted_population[:adaptive_pop_size]
+    #             fx = sorted_fx[:adaptive_pop_size]
+    #             gen_improve = 0
+
+    #         # if consecutive generation is stagnan
+    #         if gen_stagnan > max_generation_stagnan:
+    #             adaptive_pop_size_old = np.size(population, 0)
+    #             adaptive_pop_size += increment_adaptive_population
+    #             num_add_population = adaptive_pop_size - adaptive_pop_size_old
+    #             if adaptive_pop_size > max_adaptive_population:
+    #                 adaptive_pop_size = adaptive_pop_size_old
+    #                 num_add_population = 0
+    #             if adaptive_pop_size > adaptive_pop_size_old:
+    #                 new_population = np.zeros((num_add_population, n_var))
+    #                 new_popupation_fx = np.zeros(num_add_population)
+    #                 for nn in range(num_add_population):
+    #                     _,_ = adding_population(best_individual, n_var, cons_ub, cons_lb, function_id)
