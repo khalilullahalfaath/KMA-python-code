@@ -292,19 +292,22 @@ def move_small_males_first_stage(
                 dimensional_size_mlipir = 1
 
             # move the weak males based on the dimensional size of MLIPIR
-            move_weak_maes = movement_attribute[:dimensional_size_mlipir]
+            move_weak_males = movement_attribute[:dimensional_size_mlipir]
             binary_pattern = np.zeros(n_var)
-            binary_pattern[move_weak_maes] = 1
+            binary_pattern[move_weak_males] = 1
 
-            vector_mlipir_velocity = vector_mlipir_velocity + np.random.rand(n_var) * (
-                HQ[ind, :] * binary_pattern - small_males[ww, :] * binary_pattern
+            vector_mlipir_velocity = (
+                vector_mlipir_velocity
+                + np.random.rand(n_var) * (HQ[ind, :] * binary_pattern)
+                - (small_males[ww, :] * binary_pattern)
             )
+
             fol_hq += 1
             if fol_hq >= max_fol_hq:
                 break
 
         new_small_males = small_males[ww, :] + vector_mlipir_velocity
-        new_small_males = trimr(new_small_males)
+        new_small_males = trimr(new_small_males, n_var, cons_ub, cons_lb)
         temp_weak_males[ww, :] = new_small_males
         temp_weak_males_fx[ww] = evaluation(new_small_males, function_id)
 
@@ -508,10 +511,10 @@ def adding_population(population, n_var, cons_ub, cons_lb, function_id):
 
 # runner
 if __name__ == "__main__":
-    function_id = 1
-    dimension = 50
-    max_num_evaluation = 25000
-    pop_size = 5
+    function_id = 1  # identity of the benchmark function
+    dimension = 50  # dimension can scaled up to thousands for the functions f1-f13, but it is fixed for f14-f23
+    max_num_evaluation = 25000  # maximum number of evaluations
+    pop_size = 5  # population size (number of komodo individuals)
     min_adaptive_population = pop_size * 4  # minimum adaptive population size
     max_adaptive_population = pop_size * 40  # maximum adaptive population size
 
@@ -521,6 +524,7 @@ if __name__ == "__main__":
     cons_lb = np.ones(n_var) * cons_lb
 
     population = pop_cons_initialization(pop_size, n_var, cons_ub, cons_lb)
+
     # print(population)
     fx = np.zeros(pop_size)
     for i in range(pop_size):
@@ -570,10 +574,16 @@ if __name__ == "__main__":
         female_fx = fx[num_big_males]
 
         small_males = population[num_big_males + 1 :]
-        small_males_fx = fx[num_big_males + 2 :]
+        small_males_fx = fx[num_big_males + 1 :]
 
+        # Move the BigMales and Female as well in the first stage
         big_males, big_males_fx, female, female_fx = move_big_males_female_first_stage(
             big_males, big_males_fx, female, female_fx, n_var
+        )
+
+        # Move (Mlipir) SmallMales in the first stage
+        small_males, small_males_fx = move_small_males_first_stage(
+            mlipir_rate, big_males, small_males, small_males_fx, n_var, function_id
         )
 
         population = np.vstack((big_males, female, small_males))
