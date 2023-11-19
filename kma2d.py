@@ -89,6 +89,11 @@ def evaluation(X, function_id):
     :param X: population
     :return: fitness value
     """
+
+    # check if X is a 2d array then flatten it
+    if len(X.shape) == 2:
+        X = X.flatten()
+
     dim = X.shape[0]
 
     # switch
@@ -102,26 +107,25 @@ def evaluation(X, function_id):
         case 3:
             # schwefel 1.2
             fx = 0
-            for ii in range(dim):
-                fx = fx + np.sum(X[:ii]) ** 2
+            for ii in range(1, dim + 1):
+                fx = fx + (np.sum(np.power(X[0:ii], 2)))
+
         case 4:
             # schewefel 2.21
             fx = np.max(np.abs(X))
         case 5:
             # rosenbrock function
-            # fx=sum(100*(x(2:Dim)-(x(1:Dim-1).^2)).^2+(x(1:Dim-1)-1).^2);
-            # TODO: check the formula
-            fx = np.sum(
-                100 * (X[1:dim] - (X[: dim - 1] ** 2)) ** 2 + (X[: dim - 1] - 1) ** 2
-            )
+            term1 = 100.0 * (X[1:] - X[:-1] ** 2) ** 2
+            term2 = (1 - X[:-1]) ** 2
+            result = np.sum(term1 + term2)
+            return result
 
         case 6:
             # step function
             fx = np.sum(np.floor(X + 0.5) ** 2)
         case 7:
             # quartic function
-            # TODO: check the formula
-            fx = np.sum(np.arange(1, dim + 1) * X**4) + np.random.rand()
+            fx = np.sum(np.arange(1, dim + 1) * (X**4)) + np.random.rand()
         case 8:
             # schwefel function
             fx = np.sum(-X * np.sin(np.sqrt(np.abs(X))))
@@ -130,21 +134,35 @@ def evaluation(X, function_id):
             fx = np.sum(X**2 - 10 * np.cos(2 * np.pi * X) + 10 * dim)
         case 10:
             # ackley function
-            # TODO: check the formula
-            fx = (
+            return (
                 -20 * np.exp(-0.2 * np.sqrt(np.sum(X**2) / dim))
                 - np.exp(np.sum(np.cos(2 * np.pi * X)) / dim)
                 + 20
                 + np.exp(1)
             )
         case 11:
-            # fx=sum(x.^2)/4000-prod(cos(x./sqrt([1:Dim])))+1;
-            # TODO: check the formula
+            # griewank function
             fx = (
                 np.sum(X**2) / 4000
                 - np.prod(np.cos(X / np.sqrt(np.arange(1, dim + 1))))
                 + 1
             )
+        case 12:
+            a = 10
+            k = 100
+            m = 4
+            dimTemp = len(X)
+            result = (np.pi / dim) * (
+                10 * ((np.sin(np.pi * (1 + (X[0] + 1) / 4))) ** 2)
+                + np.sum(
+                    ((X[: dimTemp - 1] + 1) / 4) ** 2
+                    * (1 + 10 * ((np.sin(np.pi * (1 + (X[1:] + 1) / 4)))) ** 2)
+                )
+                + ((X[dimTemp - 1] + 1) / 4) ** 2
+            ) + np.sum(k * ((X - a) ** m) * (X > a) + k * ((-X - a) ** m) * (X < (-a)))
+            if result.size > 1:
+                result = result[0]
+            return result
     return fx
 
 
@@ -176,14 +194,14 @@ def pop_cons_initialization(population_size, n_var, cons_ub, cons_lb):
         ss = 0
         while ss < number_locations:
             Temp = np.zeros((1, n_var))
-            for i in range(int(np.floor(n_var / 2))):
-                Temp[:, i] = cons_lb[:, i] + (cons_ub[:, i] - cons_lb[:, i]) * (
-                    f1[ss] + (np.random.rand() * 2 - 1) * 0.01
-                )
-            for i in range(int(np.floor(n_var / 2)) + 1, n_var):
-                Temp[:, i] = cons_lb[:, i] + (cons_ub[:, i] - cons_lb[:, i]) * (
-                    f2[ss] + (np.random.rand() * 2 - 1) * 0.01
-                )
+            for i in range(1, int(np.floor(n_var / 2)) + 1):
+                Temp[:, i - 1] = cons_lb[:, i - 1] + (
+                    cons_ub[:, i - 1] - cons_lb[:, i - 1]
+                ) * (f1[ss] + (np.random.rand() * 2 - 1) * 0.01)
+            for i in range(int(np.floor(n_var / 2)) + 1, n_var + 1):
+                Temp[:, i - 1] = cons_lb[:, i - 1] + (
+                    cons_ub[:, i - 1] - cons_lb[:, i - 1]
+                ) * (f2[ss] + (np.random.rand() * 2 - 1) * 0.01)
 
             population[IndX, :] = Temp
             IndX += 1
@@ -212,11 +230,11 @@ def move_big_males_female_first_stage(big_males, big_malesFX, female, femaleFX, 
         RHQ = np.random.permutation(HQ.shape[0])
         FolHQ = 0
 
-        for fs in range(RHQ.shape[0]):
+        for fs in range(len(RHQ)):
             ind = RHQ[fs]
             if ind != ss:
                 # Semi-randomly select an individual to define attraction or distraction
-                if HQFX[ind] < TempSMFX[ss] or np.random.rand() < 0.5:
+                if (HQFX[ind] < TempSMFX[ss]) or (np.random.rand() < 0.5):
                     VM = VM + np.random.rand() * (HQ[ind, :] - TempSM[ss, :])
                 else:
                     VM = VM + np.random.rand() * (TempSM[ss, :] - HQ[ind, :])
@@ -227,8 +245,10 @@ def move_big_males_female_first_stage(big_males, big_malesFX, female, femaleFX, 
         NewBM = trimr(
             NewBM, n_var, cons_ub, cons_lb
         )  # Limit the values into the given dimensional boundaries
-        TempSM[ss, :] = NewBM
-        TempSMFX[ss] = evaluation(NewBM, function_id)
+        TempSM[ss, :] = NewBM.copy()
+        TempSMFX[ss] = evaluation(NewBM[0], function_id)
+        # print("TempSM[ss]", TempSM[ss])
+        # print("TempSMFX[ss]", TempSMFX[ss])
 
     # Replace the Big Males with the best ones
     big_males, big_malesFX = replacement(big_males, big_malesFX, TempSM, TempSMFX)
@@ -285,7 +305,7 @@ def move_small_males_first_stage(
         fol_hq = 0  # number of following HQ
 
         for fs in range(len(rhq)):  # for each HQ
-            ind = rhq[fs]  # index of HQ
+            ind = rhq[fs].copy()  # index of HQ
             movement_attribute = np.random.permutation(
                 n_var
             )  # random permutation of movement attribute
@@ -298,15 +318,13 @@ def move_small_males_first_stage(
                 dimensional_size_mlipir = 1
 
             # move the weak males based on the dimensional size of MLIPIR
-            move_weak_males = movement_attribute[:dimensional_size_mlipir].reshape(
-                1, -1
-            )
+            move_weak_males = movement_attribute[: dimensional_size_mlipir - 1]
             binary_pattern = np.zeros((1, n_var))
-            binary_pattern[:, move_weak_males] = 1
+            binary_pattern[0, move_weak_males] = 1
 
             vector_mlipir_velocity = (
                 vector_mlipir_velocity
-                + np.random.rand(n_var) * (HQ[ind, :] * binary_pattern)
+                + np.random.rand(1, n_var) * (HQ[ind, :] * binary_pattern)
                 - (small_males[ww, :] * binary_pattern)
             )
 
@@ -314,13 +332,13 @@ def move_small_males_first_stage(
             if fol_hq >= max_fol_hq:
                 break
 
-        new_small_males = small_males[ww, :] + vector_mlipir_velocity
+        new_small_males = small_males[ww, :].copy() + vector_mlipir_velocity
         new_small_males = trimr(new_small_males, n_var, cons_ub, cons_lb)
-        temp_weak_males[ww, :] = new_small_males
+        temp_weak_males[ww, :] = new_small_males.copy()
         temp_weak_males_fx[ww] = evaluation(new_small_males, function_id)
 
-    small_males = temp_weak_males
-    small_males_fx = temp_weak_males_fx
+    small_males = temp_weak_males.copy()
+    small_males_fx = temp_weak_males_fx.copy()
 
     return small_males, small_males_fx
 
@@ -411,8 +429,8 @@ def move_big_males_female_second_stage(
 
     big_males, big_males_fx = replacement(big_males, big_males_fx, temp_sm, temp_sm_fx)
 
-    winnerBM = big_males[0, :].reshape(1, -1)
-    winnerFX = big_males_fx[0]
+    winnerBM = big_males[0, :].reshape(1, -1).copy()
+    winnerFX = big_males_fx[0].copy()
 
     if winnerFX < female_fx or np.random.rand() < 0.5:  # sexual reproduction
         Offsprings = crossover(n_var, winnerBM, female, cons_ub, cons_lb)
@@ -422,12 +440,12 @@ def move_big_males_female_second_stage(
         # keep the best population of female
         if fx1 < fx2:
             if fx1 < female_fx:
-                female = Offsprings[0, :]
-                female_fx = fx1
+                female = Offsprings[0, :].copy()
+                female_fx = fx1.copy()
         else:
             if fx2 < female_fx:
-                female = Offsprings[1, :]
-                female_fx = fx2
+                female = Offsprings[1, :].copy()
+                female_fx = fx2.copy()
     else:  # asexual reproduction
         newFemale = mutation(
             female, n_var, cons_ub, cons_lb, mutation_rate, mutation_radius
@@ -436,8 +454,8 @@ def move_big_males_female_second_stage(
 
         # keep the best position of female
         if fx < female_fx:
-            female = newFemale
-            female_fx = fx
+            female = newFemale.copy()
+            female_fx = fx.copy()
 
     return big_males, big_males_fx, female, female_fx
 
@@ -538,6 +556,7 @@ def trimr(X, n_var, cons_ub, cons_lb):
     :return: population
     """
     X = X.reshape(1, -1)
+    X = X.copy()
     for ii in range(n_var):
         X[X[:, ii] < cons_lb[:, ii], ii] = cons_lb[:, ii]
         X[X[:, ii] > cons_ub[:, ii], ii] = cons_ub[:, ii]
@@ -572,7 +591,7 @@ def adding_population(population, n_var, cons_ub, cons_lb, function_id):
 
 # runner
 if __name__ == "__main__":
-    function_id = 6  # identity of the benchmark function
+    function_id = 12  # identity of the benchmark function
     dimension = 50  # dimension can scaled up to thousands for the functions f1-f13, but it is fixed for f14-f23
     max_num_evaluation = 25000  # maximum number of evaluations
     pop_size = 5  # population size (number of komodo individuals)
@@ -632,14 +651,14 @@ if __name__ == "__main__":
         generation += 1  # increase the generation counter
         num_evaluation += pop_size  # increase the number of evaluation
 
-        big_males = population[:num_big_males, :]
-        big_males_fx = fx[0:num_big_males]
+        big_males = population[:num_big_males, :].copy()
+        big_males_fx = fx[0:num_big_males].copy()
 
-        female = population[num_big_males, :].reshape(1, -1)
-        female_fx = fx[num_big_males]
+        female = population[num_big_males, :].reshape(1, -1).copy()
+        female_fx = fx[num_big_males].copy()
 
-        small_males = population[num_big_males + 1 :, :]
-        small_males_fx = fx[num_big_males + 1 :]
+        small_males = population[num_big_males + 1 :, :].copy()
+        small_males_fx = fx[num_big_males + 1 :].copy()
 
         # Move the BigMales and Female as well in the first stage
         big_males, big_males_fx, female, female_fx = move_big_males_female_first_stage(
@@ -651,13 +670,13 @@ if __name__ == "__main__":
             mlipir_rate, big_males, small_males, small_males_fx, n_var, function_id
         )
 
-        population = np.vstack((big_males, female, small_males))
-        fx = np.hstack((big_males_fx, female_fx, small_males_fx))
+        population = np.vstack((big_males, female, small_males)).copy()
+        fx = np.hstack((big_males_fx, female_fx, small_males_fx)).copy()
 
         sorted_fx, ind_fx = sorted(fx), fx.argsort(axis=0)
 
-        fx = sorted_fx
-        population = population[ind_fx, :]
+        fx = sorted_fx.copy()
+        population = population[ind_fx, :].copy()
 
         best_individual = population[0, :]
         optimum_value = fx[0]
@@ -887,13 +906,14 @@ if __name__ == "__main__":
                         )
                     num_evaluation += population.shape[0]
                 gen_stagnan = 0
-            random_ind = np.random.permutation(population.shape[0])
+            random_ind = np.random.permutation(population.shape[0]).astype(int)
             fx = fx[random_ind]
             population = population[random_ind, :]
 
             evo_population_size = np.hstack((evo_population_size, adaptive_pop_size))
             generation += 1
     print("Function ID\t= ", f"F{function_id}")
+    print("Improvement rate\t= ", improve_rate)
     print("Dimension\t= ", dimension)
     print("Number of evaluation\t= ", num_evaluation)
     print("Global optimum\t= ", f_treshold_fx)
